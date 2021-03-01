@@ -116,6 +116,7 @@ dt$agegrp<-as.integer(dt$agegrp)
 dt$bmi<-as.integer(dt$bmi)
 dt$race<-as.integer(dt$race)
 dt$Hispanic<-as.integer(dt$Hispanic)
+#scale the data
 corrplot(cor(dt[1:14]))
 ```
 There doesn't seem to be many strong correlations other than "invasive" and "cancer".
@@ -157,3 +158,47 @@ dt.wi <- read.csv("data.csv")
 head(dt.wi)
 tail(dt.wi)
 ```
+```{r}
+unique(dt.wi$X)
+```
+```{r}
+dt.wi<-dt.wi[,1:32]
+```
+Drop the X col, doesn't seem to provide any value
+
+
+```{r}
+cancer.p<-table(dt.wi[2])
+cancer.p
+percent.malignant<-paste(round(cancer.p[[2]]/(cancer.p[[1]]+cancer.p[[2]])*100,digits = 3), "%")
+percent.malignant
+```
+
+
+
+```{r}
+
+dt.wi$outcome[dt.wi$diagnosis == 'M']<-1
+
+dt.wi$outcome[dt.wi$diagnosis == 'B']<-0
+
+unique(dt.wi$outcome)
+```
+
+
+```{r}
+split = sample.split(dt.wi$outcome, SplitRatio = 0.60)
+Train = subset(dt.wi, split==TRUE)
+Test = subset(dt.wi, split==FALSE)
+
+# Building a Logistic Regression Model
+dt.wi.log = glm(outcome ~ ., data = Train, family=binomial)
+summary(dt.wi.log)
+```
+
+
+
+
+
+
+
