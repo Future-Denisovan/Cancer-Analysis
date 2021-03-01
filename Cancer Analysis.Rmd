@@ -159,7 +159,6 @@ abline(h = 0, v = 0, col = "gray60")
 ```
 
 
-
 # Introduction
 
 Breast Cancer Wisconsin(Diagnostic) Data Set
@@ -203,6 +202,23 @@ cancer.p
 percent.malignant<-paste(round(cancer.p[[2]]/(cancer.p[[1]]+cancer.p[[2]])*100,digits = 3), "%")
 percent.malignant
 ```
+```{r}
+dt.wi$diagnosis<-as.factor(dt.wi$diagnosis)
+
+split = sample.split(dt.wi$diagnosis, SplitRatio = .7)
+Train = subset(dt.wi, split==TRUE)
+Test = subset(dt.wi, split==FALSE)
+
+# Building a Logistic Regression Model
+dt.wi.log = glm(diagnosis ~ ., data = Train, family=binomial)
+summary(dt.wi.log)
+
+
+```
+
+
+
+
 
 
 
@@ -234,16 +250,19 @@ summary(dt.wi.log)
 
 
 ```
-glm.fit: algorithm did not convergeglm.fit: fitted probabilities numerically 0 or 1 occurred
+glm.fit: algorithm did not converge glm.fit: fitted probabilities numerically 0 or 1 occurred
 Issue with model, going to dig into what is happening by using a tree
 
 There is one fairly common circumstance in which both convergence problems and the Hauck-Donner phenomenon can occur. This is when the fitted probabilities are extremely close to zero or one. Consider a medical diagnosis problem with thousands of cases and around 50 binary explanatory variable (which may arise from coding fewer categorical variables); one of these indicators is rarely true but always indicates that the disease is present. Then the fitted probabilities of cases with that indicator should be one, which can only be achieved by taking βi = ∞. The result from glm will be warnings and an estimated coefficient of around +/- 10. There has been fairly extensive discussion of this in the statistical literature, usually claiming non-existence of maximum likelihood estimates; see Sautner and Duffy (1989, p. 234).
 
-Read more aout this error here:https://stackoverflow.com/questions/8596160/why-am-i-getting-algorithm-did-not-converge-and-fitted-prob-numerically-0-or
+Read more about this error here:https://stackoverflow.com/questions/8596160/why-am-i-getting-algorithm-did-not-converge-and-fitted-prob-numerically-0-or
 
 ```{r}
 
+CancerTree = rpart(outcome ~ ., method="class", data=dt.wi.test, minbucket=1)
+prp(CancerTree)
 ```
+
 
 
 
