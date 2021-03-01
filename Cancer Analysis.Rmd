@@ -118,11 +118,7 @@ dt$race<-as.integer(dt$race)
 dt$Hispanic<-as.integer(dt$Hispanic)
 
 corrplot(cor(dt[1:14]))
-dt.sc<-dt
 
-dt.sc[,1:14] <- scale(dt.sc[,1:14])
-cor(dt.sc[1:14])
-corrplot(cor(dt.sc[1:14]))
 
 
 ```
@@ -143,7 +139,6 @@ summary(dt.pc)
 
 ```{r}
 dt.pc$rotation
-
 ```
 
 ```{r}
@@ -163,7 +158,18 @@ fviz_cluster(KmeansClustering, data = dt.sc)
 biplot(dt.pc)
 abline(h = 0, v = 0, col = "gray60")
 ```
+```{r}
 
+split = sample.split(dt.no.na$invasive, SplitRatio = .7)
+Train = subset(dt.no.na, split==TRUE)
+Test = subset(dt.no.na, split==FALSE)
+
+# Building a Logistic Regression Model
+dt.wi.no.na.log = glm(invasive ~ agegrp + lastmamm + agefirst, data = Train, family=binomial)
+summary(dt.wi.no.na.log)
+
+
+```
 
 # Introduction
 
