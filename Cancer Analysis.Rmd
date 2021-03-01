@@ -118,6 +118,12 @@ dt$race<-as.integer(dt$race)
 dt$Hispanic<-as.integer(dt$Hispanic)
 
 corrplot(cor(dt[1:14]))
+dt.sc<-dt
+
+dt.sc[,1:14] <- scale(dt.sc[,1:14])
+cor(dt.sc[1:14])
+corrplot(cor(dt.sc[1:14]))
+
 
 ```
 There doesn't seem to be many strong correlations other than "invasive" and "cancer".
