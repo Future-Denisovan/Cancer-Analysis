@@ -1,0 +1,159 @@
+---
+title: "Cancer Analysis"
+author: "Caleb Aguiar"
+date: "2/27/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(psych)#For summary stats
+library(ggplot2)#For graphs
+library(scales)#Clean up axis labels
+library(corrplot)#Explore correlations
+library(gplots)#For plotting means
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(factoextra)
+library(cluster)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```
+
+# Introduction
+
+This introduction was paraphrased from the Breast Cancer Surveillance Consortium overview of the dataset. The purpose of analysis of this dataset is to determine casual factors related with breast cancer and practice applying statistical methodology. The following analysis concerns a dataset of 280,660 mammograms from women in the Breast Cancer Surveillance Consortium. All women did not have a previous diagnosis of breast cancer and did not have any imaging in the previous nine months preceding the mammogram. Cancer registry and pathology data wwere linked to the mammography data.
+
+
+Data collection and sharing was supported by the National Cancer Institute-funded Breast Cancer Surveillance Consortium (HHSN261201100031C). You can learn more about the BCSC at: http://www.bcsc-research.org/.
+
+```{r, eval = TRUE} 
+#Import
+dt <- read.delim("risk.txt", header = FALSE, sep = " ", dec = ".")
+#Remove extra cols
+dt<- dt[c(1,3:16,22)]
+#Rename cols
+colnames(dt)<-c('menopaus','agegrp','density','race','Hispanic','bmi','agefirst','nrelbc','brstproc','lastmamm','surgmeno','hrt','invasive','cancer','training','count')
+head(dt)
+tail(dt)
+```
+```{r}
+describe(dt)
+```
+
+
+```{r echo=FALSE}
+dt$agegrp<-as.factor(dt$agegrp)
+dt$bmi<-as.factor(dt$bmi)
+dt$race<-as.factor(dt$race)
+dt$Hispanic<-as.factor(dt$Hispanic)
+```
+
+# Demographics
+
+```{r echo=FALSE, warning=FALSE}
+ages<-c('35-39','40-44','45-49','50-59','60-64','65-69','70-74','75-79','80-84')
+bmival<-c('NA','10-24.99','25-29.99','30-34.99','35+','unknown')
+race<-c('NA','white','asian','black','nat ame','mix','unk')
+his<-c('no','yes','unk','unk','.','unk')
+
+p1 <- ggplot(dt, aes(x=agegrp)) +
+    geom_bar(fill="powderblue") +
+    ggtitle("Age Groups") + theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(ages))
+
+p2 <- ggplot(dt, aes(x=race)) +
+    geom_bar(fill="powderblue") +
+    ggtitle("Race")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(race))
+
+p3 <- ggplot(dt, aes(x=Hispanic)) +
+    geom_bar(fill="powderblue") +
+    ggtitle("Hispanic")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(his))
+
+p4 <- ggplot(dt, aes(x=bmi)) +
+    geom_bar(fill="powderblue") +
+    ggtitle("BMI")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(bmival))       
+
+multiplot(p1,p2,p3,p4,cols=2)
+```
+```{r echo=FALSE}
+dt$agegrp<-as.integer(dt$agegrp)
+dt$bmi<-as.integer(dt$bmi)
+dt$race<-as.integer(dt$race)
+dt$Hispanic<-as.integer(dt$Hispanic)
+corrplot(cor(dt[1:14]))
+```
+There doesn't seem to be many strong correlations other than "invasive" and "cancer".
+
+# K-Means
+
+```{r echo=FALSE, warning=FALSE}
+set.seed(1234)
+dt.no.na<-na.omit(dt)
+KmeansClustering <- kmeans(dt.no.na, centers = 3)
+fviz_cluster(KmeansClustering, data = dt.no.na)
+
+```
+# Introduction
+
+Breast Cancer Wisconsin(Diagnostic) Data Set
+
+Predict whether the cancer is benign or malignant
+
+Features are computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. They describe characteristics of the cell nuclei present in the image.
+
+Ten real-valued features are computed for each cell nucleus:
+
+a) radius (mean of distances from center to points on the perimeter)
+b) texture (standard deviation of gray-scale values)
+c) perimeter
+d) area
+e) smoothness (local variation in radius lengths)
+f) compactness (perimeter^2 / area - 1.0)
+g) concavity (severity of concave portions of the contour)
+h) concave points (number of concave portions of the contour)
+i) symmetry
+j) fractal dimension ("coastline approximation" - 1)
+
+```{r, eval = TRUE} 
+#Import
+dt.wi <- read.csv("data.csv")
+
+head(dt.wi)
+tail(dt.wi)
+```
