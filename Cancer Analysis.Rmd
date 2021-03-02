@@ -201,9 +201,24 @@ dt.wi.pc<-prcomp(dt.wi.sc)
 summary(dt.wi.pc)
 ```
 ```{r}
+dt.wi.pc$rotation
 
 ```
 
+```{r}
+plot(dt.wi.pc, type='l')
+
+```
+```{r}
+biplot(dt.wi.pc)
+abline(h = 0, v = 0, col = "gray60")
+```
+```{r}
+KmeansClustering <- kmeans(dt.wi.sc, centers = 4)
+
+KmeansClustering$size
+fviz_cluster(KmeansClustering, data = dt.wi.sc)
+```
 
 
 
