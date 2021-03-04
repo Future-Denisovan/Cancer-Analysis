@@ -68,9 +68,9 @@ Data collection and sharing was supported by the National Cancer Institute-funde
 #Import
 dt <- read.delim("risk.txt", header = FALSE, sep = " ", dec = ".")
 #Remove extra cols
-dt<- dt[c(1,3:16,22)]
+dt<- dt[c(1,3:16)]
 #Rename cols
-colnames(dt)<-c('menopaus','agegrp','density','race','Hispanic','bmi','agefirst','nrelbc','brstproc','lastmamm','surgmeno','hrt','invasive','cancer','training','count')
+colnames(dt)<-c('menopaus','agegrp','density','race','Hispanic','bmi','agefirst','nrelbc','brstproc','lastmamm','surgmeno','hrt','invasive','cancer','training')
 head(dt)
 tail(dt)
 ```
@@ -160,6 +160,77 @@ biplot(dt.pc)
 abline(h = 0, v = 0, col = "gray60")
 ```
 
+```{r}
+
+dt$cancer<-as.factor(dt$cancer)
+colors<-c("green","red")
+plot(dt.pc$x,pch=20,col=colors[dt$cancer])
+
+```
+
+```{r}
+library(xgboost)
+#Import
+dt <- read.delim("risk.txt", header = FALSE, sep = " ", dec = ".")
+#Remove extra cols
+dt<- dt[c(1,3:16)]
+#Rename cols
+colnames(dt)<-c('menopaus','agegrp','density','race','Hispanic','bmi','agefirst','nrelbc','brstproc','lastmamm','surgmeno','hrt','invasive','cancer','training')
+unique(dt$cancer)
+```
+
+```{r}
+
+
+split = sample.split(dt$cancer, SplitRatio = 0.7)
+Train = subset(dt, split==TRUE)
+Test = subset(dt, split==FALSE)
+```
+
+
+```{r}
+
+xgb.cancer<- xgboost(data = data.matrix(Train), 
+                  label = Train[,14], 
+                  eta = 0.1,
+                  max_depth = 1, 
+                  nround=100, 
+                  subsample = 1,
+                  colsample_bytree = 1,
+                  num_class = 1,
+                  min_child_weight = 10,
+                  gamma = 7,
+                  nthread = 30,
+                  eval_metric = "logloss",
+                  objective = "binary:logistic",
+                  verbose = 0
+                  )
+```
+
+
+
+
+
+```{r}
+Test$xgb.pred <- predict(xgb.cancer, data.matrix(Test))
+
+```
+
+```{r}
+dt.log = glm(cancer~., data = Train, family = binomial)
+summary(dt.log)
+
+
+```
+
+
+```{r}
+library(pROC)
+auc = roc(Test$cancer,Test$xgb.pred)
+auc
+```
+
+
 
 # Introduction
 
@@ -186,6 +257,7 @@ j) fractal dimension ("coastline approximation" - 1)
 #Import
 dt.wi <- read.csv("data.csv")
 dt.wi<-dt.wi[,1:32]
+dt.wi$diagnosis<-as.factor(dt.wi$diagnosis)
 
 head(dt.wi)
 tail(dt.wi)
@@ -194,7 +266,7 @@ tail(dt.wi)
 describe(dt.wi)
 ```
 ```{r}
-dt.wi.sc <- scale(dt.wi[3:32])
+dt.wi.sc <- scale(dt.wi[3:10])
 describe(dt.wi.sc)
 
 dt.wi.pc<-prcomp(dt.wi.sc)
@@ -210,13 +282,20 @@ plot(dt.wi.pc, type='l')
 
 ```
 ```{r}
-biplot(dt.wi.pc)
+biplot(dt.wi.pc,xlim=c(-.25,.15), ylim=c(-.12,.12))
 abline(h = 0, v = 0, col = "gray60")
 ```
-```{r}
-KmeansClustering <- kmeans(dt.wi.sc, centers = 4)
 
-KmeansClustering$size
+```{r}
+plot(dt.wi.pc$x,pch=20,col=dt.wi$diagnosis)
+```
+
+
+
+
+```{r}
+KmeansClustering <- kmeans(dt.wi.sc, centers = 2)
+
 fviz_cluster(KmeansClustering, data = dt.wi.sc)
 ```
 
@@ -225,7 +304,6 @@ fviz_cluster(KmeansClustering, data = dt.wi.sc)
 
 ```{r}
 unique(dt.wi$X)
-dt.wi$diagnosis<-as.factor(dt.wi$diagnosis)
 ```
 
 
@@ -243,7 +321,7 @@ Train = subset(dt.wi, split==TRUE)
 Test = subset(dt.wi, split==FALSE)
 
 # Building a Logistic Regression Model
-dt.wi.log = glm(diagnosis~.-id-X, data = dt.wi, family = binomial, na.action = na.pass)
+dt.wi.log = glm(diagnosis~., data = dt.wi, family = binomial, na.action = na.pass)
 summary(dt.wi.log)
 
 head(dt.wi)
@@ -256,34 +334,6 @@ head(dt.wi)
 
 
 
-```{r}
-
-#dt.wi$diagnosis[dt.wi$diagnosis == 'M']<-1
-
-#dt.wi$diagnosis[dt.wi$diagnosis == 'B']<-0
-
-unique(dt.wi$outcome)
-
-summary(dt.wi$outcome)
-table(dt.wi$outcome)
-```
-
-
-```{r}
-dt.wi.test<-subset(dt.wi[3:33])
-
-summary(dt.wi.test)
-
-split = sample.split(dt.wi.test$outcome, SplitRatio = .5)
-Train = subset(dt.wi.test, split==TRUE)
-Test = subset(dt.wi.test, split==FALSE)
-
-# Building a Logistic Regression Model
-dt.wi.log = glm(outcome ~ ., data = Train, family=binomial)
-summary(dt.wi.log)
-
-
-```
 glm.fit: algorithm did not converge glm.fit: fitted probabilities numerically 0 or 1 occurred
 Issue with model, going to dig into what is happening by using a tree
 
@@ -291,10 +341,6 @@ There is one fairly common circumstance in which both convergence problems and t
 
 Read more about this error here:https://stackoverflow.com/questions/8596160/why-am-i-getting-algorithm-did-not-converge-and-fitted-prob-numerically-0-or
 
-```{r}
-dt.wi.test$prediction<-predict(dt.wi.log, type = "response", newdata = Test)
-```
-
 
 
 
@@ -303,7 +349,7 @@ dt.wi.test$prediction<-predict(dt.wi.log, type = "response", newdata = Test)
 
 ```{r}
 
-CancerTree = rpart(outcome ~ ., method="class", data=dt.wi.test, minbucket=1)
+CancerTree = rpart(outcome ~ ., method="class", data=dt.wi, minbucket=1)
 prp(CancerTree)
 ```
 
