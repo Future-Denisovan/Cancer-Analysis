@@ -1,0 +1,123 @@
+---
+title: "Team Project"
+author: "Donovan Nguyen"
+date: "2/27/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Clear Environment
+rm(list=ls())
+cat("\04")
+
+# Set Working Directory
+# getwd()
+# setwd()
+
+# Set seed
+set.seed(1234)
+```
+
+### Initial Data Load
+
+```{r message=FALSE, warning=FALSE}
+# Load library
+library(fastDummies)
+library(janitor)
+library('caTools')
+
+# Load data and clean
+df <- read.csv('data.csv')
+
+# Data values overview
+head(df)
+
+# Dummy diagnosis variable
+df <- dummy_cols(df, select_columns = 'diagnosis')
+
+# Remove unneeded columns cannot be used for modeling
+df$X <- NULL
+df$id <- NULL
+df$diagnosis <- NULL
+df$diagnosis_B <- NULL
+
+# Clean header names
+df <- clean_names(df)
+df$f_diagnosis_m <- as.factor(df$diagnosis_m)
+head(df)
+```
+
+#### Summary statistics
+```{r message=FALSE, warning=FALSE}
+# Load library
+library(psych)
+
+# Summary of data
+describe(df[1:30])
+
+# Proportion of malignant (1) vs benign (0)
+sum(df$diagnosis_m)/nrow(df)
+```
+
+The proportion of records that are malignant in this data set is 0.3726. This is much higher then anticipated because we expect the distribution of malignant tumor diagnosis to be very small. 
+
+
+```{r message=FALSE, warning=FALSE}
+# Load library
+library(tidyverse)
+library(GGally)
+library(ggplot2)
+
+# Standardize data set
+# df.std <- df %>% mutate_if(is.numeric, scale)
+# df.std
+
+# Correlation matrix, density curve, and scatterplot of means
+ggpairs(df[,c(1:10,32)], 
+        aes(color=f_diagnosis_m, alpha = 0.5), 
+        lower=list(continuous="smooth")) + 
+  theme_bw() + 
+  labs(title="Means") + 
+  theme(plot.title = element_text(face='bold', color='black', hjust=0.5, size=12),
+        legend.position = "bottom",
+        strip.text = element_text(size=6.5))
+
+ggpairs(df[,c(11:20,32)], 
+        aes(color=f_diagnosis_m, alpha = 0.5), 
+        lower=list(continuous="smooth")) + 
+  theme_bw() + 
+  labs(title="SE") + 
+  theme(plot.title = element_text(face='bold', color='black', hjust=0.5, size=12),
+        legend.position = "bottom",
+        strip.text = element_text(size=6.5))
+
+ggpairs(df[,c(21:30,32)], 
+        aes(color=f_diagnosis_m, alpha = 0.5), 
+        lower=list(continuous="smooth")) + 
+  theme_bw() + 
+  labs(title="Worst") + 
+  theme(plot.title = element_text(face='bold', color='black', hjust=0.5, size=12),
+        legend.position = "bottom",
+        strip.text = element_text(size=6.5))
+
+```
+
+From the distribution plots we see that variables radius_mean, perimeter_mean, concavity_mean, concave_points_mean, perimeter_worst, and concave_points_worst look to have some notable differences in their distributions. As for correlations among the variables, we see high correlations (>.75) between radius_mean & perimeter_mean, radius_mean & area_mean, perimeter_mean & area_mean, perimeter_mean & concave_points_mean, area_mean & concave_points_mean, compactness_mean & concavity_mean, compactness_mean & concave_points_mean, and concavity_mean & concave_points_mean.
+
+### Split Data Train & Test
+```{r message=FALSE, warning=FALSE}
+# Split data into train and test
+split <- sample.split(df$diagnosis_m, SplitRatio = .70)
+df.train <- subset(df, split == TRUE)
+df.test <- subset(df, split == FALSE)
+
+# Check proportions of malignant in train and test
+
+```
+
+### Training Model
+
+
+
