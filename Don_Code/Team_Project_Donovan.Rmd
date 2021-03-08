@@ -66,13 +66,8 @@ The proportion of records that are malignant in this data set is 0.3726. This is
 
 ```{r message=FALSE, warning=FALSE}
 # Load library
-library(tidyverse)
 library(GGally)
 library(ggplot2)
-
-# Standardize data set
-# df.std <- df %>% mutate_if(is.numeric, scale)
-# df.std
 
 # Correlation matrix, density curve, and scatterplot of means
 ggpairs(df[,c(1:10,32)], 
@@ -106,6 +101,39 @@ ggpairs(df[,c(21:30,32)],
 
 From the distribution plots we see that variables radius_mean, perimeter_mean, concavity_mean, concave_points_mean, perimeter_worst, and concave_points_worst look to have some notable differences in their distributions. As for correlations among the variables, we see high correlations (>.75) between radius_mean & perimeter_mean, radius_mean & area_mean, perimeter_mean & area_mean, perimeter_mean & concave_points_mean, area_mean & concave_points_mean, compactness_mean & concavity_mean, compactness_mean & concave_points_mean, and concavity_mean & concave_points_mean.
 
+### PCA
+Due to some of the highly correlated variables (multiculinearity) found in the previous step, it makes sense to perform a PCA in order to reduce the number of variables we will use in our model.
+
+```{r}
+# Scale data set
+df.sc <- df
+df.sc[,1:30] <- scale(df[,1:30]) 
+
+# Perform pca and output results
+df.pc = prcomp(df.sc[,1:30])
+summary(df.pc)
+```
+
+PCA tells us that the first 5 principal components can explain 84.73% of the data.
+
+### Scree Plot
+```{r}
+# Load library
+library(factoextra)
+
+# Screeplot
+plot(df.pc, type='l', main='PCA - Screeplot')
+
+# Biplot
+fviz_pca_biplot(df.pc, 
+                col.ind = df$f_diagnosis_m, 
+                col="black",
+                geom = "point", 
+                repel=TRUE,
+                legend.title="Malignant Ind", 
+                addEllipses = TRUE)
+```
+
 ### Split Data Train & Test
 ```{r message=FALSE, warning=FALSE}
 # Split data into train and test
@@ -114,10 +142,29 @@ df.train <- subset(df, split == TRUE)
 df.test <- subset(df, split == FALSE)
 
 # Check proportions of malignant in train and test
-
+sum(df.train$diagnosis_m)/nrow(df.train)
+sum(df.test$diagnosis_m)/nrow(df.test)
 ```
 
 ### Training Model
 
+#### Logistic Regression
+```{r}
+# Build logistic regression model
+df.train.log <- glm(f_diagnosis_m ~ . - diagnosis_m, data = df.train, family = binomial(logit))
+summary(df.train.log)
+
+# Apply model to training set
+pred.train <- predict(df.train.log, type='response')
+table(df.train$f_diagnosis_m, round(pred.train))
+```
+
+#### PCA Logistic regression
+```{r}
+car.pred <- predict(car.pc, car.sc)
+car.pca <- car[, 1:3]
+car.pca[, 4:9] <- car.pred
+head(car.pca)
+```
 
 
