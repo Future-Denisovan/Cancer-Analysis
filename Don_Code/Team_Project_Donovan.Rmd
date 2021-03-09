@@ -134,12 +134,27 @@ fviz_pca_biplot(df.pc,
                 addEllipses = TRUE)
 ```
 
+#### Create PCA data set
+```{r}
+# Create new data set with PCA
+df.pca.pred <- predict(df.pc, df.sc)
+df.pca <- data.frame(df.pca.pred[])
+df.pca$f_diagnosis_m <- df.sc[, 32]
+head(df.pca)
+```
+
+
 ### Split Data Train & Test
 ```{r message=FALSE, warning=FALSE}
 # Split data into train and test
-split <- sample.split(df$diagnosis_m, SplitRatio = .70)
+split <- sample.split(df$f_diagnosis_m, SplitRatio = .70)
 df.train <- subset(df, split == TRUE)
 df.test <- subset(df, split == FALSE)
+
+# Split PCA data set
+split.pca <- sample.split(df.pca$f_diagnosis_m, SplitRatio = .70)
+df.train.pca <- subset(df.pca, split == TRUE)
+df.test.pca <- subset(df.pca, split == FALSE)
 
 # Check proportions of malignant in train and test
 sum(df.train$diagnosis_m)/nrow(df.train)
@@ -161,10 +176,13 @@ table(df.train$f_diagnosis_m, round(pred.train))
 
 #### PCA Logistic regression
 ```{r}
-car.pred <- predict(car.pc, car.sc)
-car.pca <- car[, 1:3]
-car.pca[, 4:9] <- car.pred
-head(car.pca)
+# Build logistic regression model for PCA data set
+df.train.pca.log <- glm(f_diagnosis_m ~  , data = df.train.pca, family = binomial(logit))
+summary(df.train.pca.log)
+
+# Apply model to training set
+pred.train <- predict(df.train.log, type='response')
+table(df.train$f_diagnosis_m, round(pred.train))
 ```
 
 
