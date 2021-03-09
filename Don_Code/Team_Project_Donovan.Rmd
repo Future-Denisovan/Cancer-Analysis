@@ -159,6 +159,7 @@ df.test.pca <- subset(df.pca, split == FALSE)
 # Check proportions of malignant in train and test
 sum(df.train$diagnosis_m)/nrow(df.train)
 sum(df.test$diagnosis_m)/nrow(df.test)
+
 ```
 
 ### Training Model
@@ -172,17 +173,33 @@ summary(df.train.log)
 # Apply model to training set
 pred.train <- predict(df.train.log, type='response')
 table(df.train$f_diagnosis_m, round(pred.train))
+
+# Apply model on test data
+pred.test.log <- predict(df.train.log, newdata = df.test, type='response')
+df.test$pred_log <- pred.test.log
+
+# Calculate test accuracy
+accuracy.test.log <- table(df.test$f_diagnosis_m, round(pred.test.log))
+accuracy.test.log
 ```
 
 #### PCA Logistic regression
 ```{r}
 # Build logistic regression model for PCA data set
-df.train.pca.log <- glm(f_diagnosis_m ~  , data = df.train.pca, family = binomial(logit))
+df.train.pca.log <- glm(f_diagnosis_m ~ PC1 + PC2 + PC3 + PC4 + PC5 , data = df.train.pca, family = binomial(logit))
 summary(df.train.pca.log)
 
 # Apply model to training set
-pred.train <- predict(df.train.log, type='response')
-table(df.train$f_diagnosis_m, round(pred.train))
+pred.train.pca <- predict(df.train.pca.log, type='response')
+table(df.train.pca$f_diagnosis_m, round(pred.train.pca))
+
+# Apply model on test data
+pred.test.log.pca <- predict(df.train.pca.log, newdata = df.test.pca, type='response')
+df.test$pred_log_pca <- pred.test.log.pca
+
+# Calculate test accuracy
+accuracy.test.log.pca <- table(df.test$f_diagnosis_m, round(pred.test.log.pca))
+accuracy.test.log.pca
 ```
 
 
