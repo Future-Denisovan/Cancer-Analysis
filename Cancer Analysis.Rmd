@@ -130,9 +130,10 @@ When we look at some of the demographics for the data, we see that we have a rig
 
 <<<<<<< HEAD
 ```{r}
+men<-c('No','Yes','Unk')
 p5 <- ggplot(dt, aes(x=menopaus)) +
     geom_bar(fill="powderblue") +
-    ggtitle("Menopaus") + theme(axis.text.x = element_text(angle = 65, hjust = 1))
+    ggtitle("Menopaus") + theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(men))
 
 
 p6 <- ggplot(dt, aes(x=density)) +
@@ -145,31 +146,32 @@ p7 <- ggplot(dt, aes(x=nrelbc)) +
 
 p8 <- ggplot(dt, aes(x=brstproc)) +
     geom_bar(fill="powderblue") +
-    ggtitle("brstproc")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))      
-
+    ggtitle("Previous Breast Proc")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+scale_x_discrete(labels=c(men))      
+lm<-c('neg','falpos','unk')
 p9 <- ggplot(dt, aes(x=lastmamm)) +
     geom_bar(fill="powderblue") +
-    ggtitle("BMI")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))  
-
+    ggtitle("Last Mamm")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+scale_x_discrete(labels=c(lm)) 
+su<-c('nat','sur','unk')
 p10 <- ggplot(dt, aes(x=surgmeno)) +
     geom_bar(fill="powderblue") +
-    ggtitle("BMI")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))  
+    ggtitle("BMI")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+scale_x_discrete(labels=c(su)) 
 
 
 p11 <- ggplot(dt, aes(x=hrt)) +
     geom_bar(fill="powderblue") +
-    ggtitle("hrt")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))  
+    ggtitle("hrt")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+scale_x_discrete(labels=c(men)) 
 
 p12 <- ggplot(dt, aes(x=invasive)) +
     geom_bar(fill="powderblue") +
-    ggtitle("Invasive")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))  
+    ggtitle("Invasive")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+scale_x_discrete(labels=c(men))   
 
 
 p13 <- ggplot(dt, aes(x=cancer)) +
     geom_bar(fill="powderblue") +
-    ggtitle("Cancer")+ theme(axis.text.x = element_text(angle = 65, hjust = 1)) 
+    ggtitle("Cancer")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+scale_x_discrete(labels=c(men))  
 
-multiplot(p5,p6,p7,p8,p9,p10,p11,p12,p13,cols=3)
+multiplot(p5,p6,p7,p8,p9,cols=2)
+multiplot(p10,p11,p12,p13,cols=2)
 ```
 
 
