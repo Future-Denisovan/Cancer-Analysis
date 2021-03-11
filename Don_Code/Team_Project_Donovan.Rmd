@@ -27,6 +27,7 @@ set.seed(1234)
 library(fastDummies)
 library(janitor)
 library('caTools')
+library(tidyverse)
 
 # Load data and clean
 df <- read.csv('data.csv')
@@ -93,7 +94,7 @@ ggpairs(df[,c(21:30,32)],
         lower=list(continuous="smooth")) + 
   theme_bw() + 
   labs(title="Worst") + 
-  theme(plot.title = element_text(face='bold', color='black', hjust=0.5, size=12),
+  theme(plot.title = element_text(face='bold', color='--black', hjust=0.5, size=12),
         legend.position = "bottom",
         strip.text = element_text(size=6.5))
 
@@ -181,6 +182,8 @@ df.test$pred_log <- pred.test.log
 # Calculate test accuracy
 accuracy.test.log <- table(df.test$f_diagnosis_m, round(pred.test.log))
 accuracy.test.log
+(104+61)/(104+61+3+3)
+
 ```
 
 #### PCA Logistic regression
@@ -200,6 +203,25 @@ df.test$pred_log_pca <- pred.test.log.pca
 # Calculate test accuracy
 accuracy.test.log.pca <- table(df.test$f_diagnosis_m, round(pred.test.log.pca))
 accuracy.test.log.pca
+(106+60)/(106+60+1+4)
+
 ```
 
+### Model Evaluation
+```{r}
+library(pROC)
+# logit 1 model accuracy
+accuracy.test.log
+(104+61)/(104+61+3+3)
 
+# Logit 2 (PCA) mode accuracy
+accuracy.test.log.pca
+(106+60)/(106+60+1+4)
+
+# AUC logit 1 model
+roc(df.test$f_diagnosis_m, pred.test.log, plot=TRUE)
+
+# AUC logit 2 (PCA) model
+roc(df.test.pca$f_diagnosis_m, pred.test.log.pca, plot=TRUE)
+
+```
