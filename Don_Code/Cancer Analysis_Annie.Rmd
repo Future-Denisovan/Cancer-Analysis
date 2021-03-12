@@ -1,0 +1,636 @@
+---
+title: "Cancer Analysis"
+author: "Caleb Aguiar"
+date: "2/27/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(psych)#For summary stats
+library(ggplot2)#For graphs
+library(scales)#Clean up axis labels
+library(corrplot)#Explore correlations
+library(gplots)#For plotting means
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(factoextra)
+library(cluster)
+library(caTools)
+library(tidyverse)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```
+
+<!-- # FIRST DATA SET: Introduction -->
+
+<!-- This introduction was paraphrased from the Breast Cancer Surveillance Consortium overview of the dataset. The purpose of analysis of this dataset is to determine casual factors that predict malignant breast cancer cells and practice applying statistical methodology. The following analysis concerns a dataset of 280,660 mammograms from women in the Breast Cancer Surveillance Consortium. All women did not have a previous diagnosis of breast cancer and did not have any imaging in the previous nine months preceding the mammogram. Cancer registry and pathology data were linked to the mammography data. -->
+
+
+<!-- The dataset is intended to be used for risk estimation. We will use different methods to predict the risk of developing malignant cells based on the variables that we may have. We will see how accurate our model is with just demographics, then a model with basic patient history(which a patient themselves would know and be able to answer in a questionnaire, the application of this maybe a web application where you input your information and get your risk), and then finally all variables including ones that a medical professional may only be able to generate(this could be in the form of an application that a medical professional would be able to input measured variables based on a visit and calculate a paticular patient's risk). -->
+
+
+<!-- Data collection and sharing was supported by the National Cancer Institute-funded Breast Cancer Surveillance Consortium (HHSN261201100031C). You can learn more about the BCSC at: http://www.bcsc-research.org/. -->
+
+<!-- ```{r, eval = TRUE} -->
+<!-- #Import -->
+<!-- dt <- read.delim("risk.txt", header = FALSE, sep = " ", dec = ".") -->
+<!-- #Remove extra cols -->
+<!-- dt<- dt[c(1,3:16)] -->
+<!-- #Rename cols -->
+<!-- colnames(dt)<-c('menopaus','agegrp','density','race','Hispanic','bmi','agefirst','nrelbc','brstproc','lastmamm','surgmeno','hrt','invasive','cancer','training') -->
+<!-- head(dt) -->
+<!-- tail(dt) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- describe(dt) -->
+<!-- ``` -->
+
+
+<!-- ```{r echo=FALSE} -->
+<!-- dt$agegrp<-as.factor(dt$agegrp) -->
+<!-- dt$bmi<-as.factor(dt$bmi) -->
+<!-- dt$race<-as.factor(dt$race) -->
+<!-- dt$Hispanic<-as.factor(dt$Hispanic) -->
+<!-- ``` -->
+
+<!-- # Demographics -->
+
+<!-- ```{r echo=FALSE, warning=FALSE} -->
+<!-- ages<-c('35-39','40-44','45-49','50-59','60-64','65-69','70-74','75-79','80-84') -->
+<!-- bmival<-c('NA','10-24.99','25-29.99','30-34.99','35+','unknown') -->
+<!-- race<-c('NA','white','asian','black','nat ame','mix','unk') -->
+<!-- his<-c('no','yes','unk','unk','.','unk') -->
+
+<!-- p1 <- ggplot(dt, aes(x=agegrp)) + -->
+<!--     geom_bar(fill="powderblue") + -->
+<!--     ggtitle("Age Groups") + theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(ages)) -->
+
+<!-- p2 <- ggplot(dt, aes(x=race)) + -->
+<!--     geom_bar(fill="powderblue") + -->
+<!--     ggtitle("Race")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(race)) -->
+
+<!-- p3 <- ggplot(dt, aes(x=Hispanic)) + -->
+<!--     geom_bar(fill="powderblue") + -->
+<!--     ggtitle("Hispanic")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(his)) -->
+
+<!-- p4 <- ggplot(dt, aes(x=bmi)) + -->
+<!--     geom_bar(fill="powderblue") + -->
+<!--     ggtitle("BMI")+ theme(axis.text.x = element_text(angle = 65, hjust = 1))+ scale_x_discrete(labels=c(bmival)) -->
+
+<!-- multiplot(p1,p2,p3,p4,cols=2) -->
+<!-- ``` -->
+<!-- When we look at some of the demographics for the data, we see that we have a right skew for age groups, with demographic data that is/is not representative of the national level US population. -->
+
+<!-- # Checking for correlations -->
+<!-- ```{r echo=FALSE} -->
+<!-- dt$agegrp<-as.integer(dt$agegrp) -->
+<!-- dt$bmi<-as.integer(dt$bmi) -->
+<!-- dt$race<-as.integer(dt$race) -->
+<!-- dt$Hispanic<-as.integer(dt$Hispanic) -->
+<!-- corrplot(cor(dt[1:14])) -->
+<!-- ``` -->
+<!-- There doesn't seem to be many strong correlations other than "invasive" and "cancer". -->
+
+<!-- ```{r} -->
+
+<!-- dt$cancer<-as.factor(dt$cancer) -->
+
+
+<!-- ``` -->
+
+
+<!-- # XGBoost Model -->
+<!-- ```{r} -->
+<!-- library(xgboost) -->
+<!-- #Import -->
+<!-- dt <- read.delim("risk.txt", header = FALSE, sep = " ", dec = ".") -->
+<!-- #Remove extra cols -->
+<!-- dt<- dt[c(1,3:16)] -->
+<!-- #Rename cols -->
+<!-- colnames(dt)<-c('menopaus','agegrp','density','race','Hispanic','bmi','agefirst','nrelbc','brstproc','lastmamm','surgmeno','hrt','invasive','cancer','training') -->
+<!-- unique(dt$cancer) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- set.seed(1234) -->
+<!-- split = sample.split(dt$cancer, SplitRatio = 0.7) -->
+<!-- Train = subset(dt, split==TRUE) -->
+<!-- Test = subset(dt, split==FALSE) -->
+<!-- #Look at different abilities to predict based on what values we have -->
+
+<!-- #Only demographics -->
+<!-- demo.col<-c(2,4,5,6)#Only agegroup, race, and bmi -->
+
+<!-- hist.col<-c(1,2,3,4,5,6,7,8,9)#without testing, add patient history to demographics -->
+
+<!-- med.col<-c(1:12) #without invasive -->
+
+
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+
+<!-- xgb.cancer.demo<- xgboost(data = data.matrix(Train[demo.col]), -->
+<!--                   label = Train[,14], -->
+<!--                   eta = 0.1, -->
+<!--                   max_depth = 1, -->
+<!--                   nround=100, -->
+<!--                   subsample = 1, -->
+<!--                   colsample_bytree = 1, -->
+<!--                   num_class = 1, -->
+<!--                   min_child_weight = 10, -->
+<!--                   gamma = 7, -->
+<!--                   nthread = 30, -->
+<!--                   eval_metric = "logloss", -->
+<!--                   objective = "binary:logistic", -->
+<!--                   verbose = 0 -->
+<!--                   ) -->
+
+<!-- xgb.cancer.hist<- xgboost(data = data.matrix(Train[hist.col]), -->
+<!--                   label = Train[,14], -->
+<!--                   eta = 0.1, -->
+<!--                   max_depth = 1, -->
+<!--                   nround=100, -->
+<!--                   subsample = 1, -->
+<!--                   colsample_bytree = 1, -->
+<!--                   num_class = 1, -->
+<!--                   min_child_weight = 10, -->
+<!--                   gamma = 7, -->
+<!--                   nthread = 30, -->
+<!--                   eval_metric = "logloss", -->
+<!--                   objective = "binary:logistic", -->
+<!--                   verbose = 0 -->
+<!--                   ) -->
+
+<!-- xgb.cancer.med<- xgboost(data = data.matrix(Train[med.col]), -->
+<!--                   label = Train[,14], -->
+<!--                   eta = 0.1, -->
+<!--                   max_depth = 1, -->
+<!--                   nround=100, -->
+<!--                   subsample = 1, -->
+<!--                   colsample_bytree = 1, -->
+<!--                   num_class = 1, -->
+<!--                   min_child_weight = 10, -->
+<!--                   gamma = 7, -->
+<!--                   nthread = 30, -->
+<!--                   eval_metric = "logloss", -->
+<!--                   objective = "binary:logistic", -->
+<!--                   verbose = 0 -->
+<!--                   ) -->
+<!-- ``` -->
+
+
+
+
+
+<!-- ```{r} -->
+<!-- Test$xgb.pred.demo <- predict(xgb.cancer.demo, data.matrix(Test[demo.col])) -->
+<!-- Test$xgb.pred.hist<- predict(xgb.cancer.hist, data.matrix(Test[hist.col])) -->
+<!-- Test$xgb.pred.med<- predict(xgb.cancer.med, data.matrix(Test[med.col])) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- library(pROC) -->
+<!-- auc.demo = roc(Test$cancer,Test$xgb.pred.demo) -->
+
+<!-- auc(auc.demo) -->
+
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- auc.hist = roc(Test$cancer,Test$xgb.pred.hist) -->
+
+<!-- auc(auc.hist) -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- auc.med = roc(Test$cancer,Test$xgb.pred.med) -->
+
+<!-- auc(auc.med) -->
+
+<!-- XGBAccuracy1 = Test %>% -->
+<!--   select(cancer, xgb.pred.med) -->
+
+<!-- XGBAccuracy1$Prediction = round(XGBAccuracy1$xgb.pred.med) -->
+
+<!-- cmxgb = table(XGBAccuracy1$cancer, XGBAccuracy1$Prediction) -->
+<!-- row.names(cmxgb) = c("No", "Yes") -->
+<!-- cmxgb -->
+
+<!-- AccuracyX = (77928+1106) / (77928+1106 + 618 + 4546) -->
+<!-- AccuracyX -->
+<!-- ``` -->
+
+<!-- The XGBoost model using all the variables gives us an AUC of 93%. -->
+
+<!-- # Other Models -->
+
+<!-- We wanted to see if a logistic regression model or CART model would outperform the XGBoost model -->
+
+<!-- ```{r} -->
+<!-- #Logistic Regression -->
+<!-- BCLog = glm(cancer ~ . - invasive - training, data = Train, family=binomial) -->
+<!-- summary(BCLog) -->
+
+<!-- #Prediction -->
+<!-- PredictTest = predict(BCLog, newdata = Test, type = "response") -->
+
+<!-- #Confusion Matrix -->
+<!-- cm = table(Test$cancer, round(PredictTest)) -->
+<!-- row.names(cm) = c("No", "Yes") -->
+<!-- cm -->
+
+<!-- #Accuracy is the baseline -->
+
+<!-- #Baseline Accuracy -->
+<!-- 1-sum(Test$cancer)/nrow(Test) -->
+
+<!-- #AUC -->
+<!-- TestPred <- data.frame(Probability = predict(BCLog, Test, type = c("response")), -->
+<!--                        Prediction = round(predict(BCLog, Test, type = c("response")), digits = 0), -->
+<!--                        ActualDiagnosis = Test$cancer) -->
+
+<!-- auc.BC1 = roc(TestPred$ActualDiagnosis, TestPred$Prediction) -->
+<!-- auc(auc.BC1) -->
+
+
+<!-- ``` -->
+
+<!-- # CART Model -->
+<!-- ```{r} -->
+<!-- # CART -->
+<!-- BCTree = rpart(cancer ~ . - invasive - training, method="class", data=Train, minbucket=5) -->
+<!-- prp(BCTree) -->
+
+<!-- # Evaluating the Model -->
+<!-- BCPredict = predict(BCTree, newdata=Test, type="class") # automatically assumes threshold = 0.5 and directly predicts 0 or 1 -->
+<!-- table(Test$cancer, BCPredict) -->
+
+<!-- #Accuracy -->
+<!-- (77373 + 2239)/(77373 + 2239 + 1173+3413) -->
+
+<!-- ``` -->
+
+<!-- The Cart model is more accurate than the baseline by quite a lot. -->
+
+
+<!-- # Cancer Calculator -->
+<!-- ```{r} -->
+<!-- BreastCancerProbability = function(menopause, agegrp, density, race, Hispanic, bmi, -->
+<!--                                     agefirst, nrelbc, brstproc, lastmamm, surgmeno, hrt, invasive) { -->
+<!--   newdata = data.frame(menopaus = menopause, -->
+<!--                        agegrp = agegrp, -->
+<!--                        density = density, -->
+<!--                        race = race, -->
+<!--                        Hispanic = Hispanic, -->
+<!--                        bmi = bmi, -->
+<!--                        agefirst = agefirst, -->
+<!--                        nrelbc = nrelbc, -->
+<!--                        brstproc = brstproc, -->
+<!--                        lastmamm=lastmamm, -->
+<!--                        surgmeno = surgmeno, -->
+<!--                        hrt = hrt, -->
+<!--                        invasive = invasive) -->
+
+<!--   newdata2 = data.frame(menopaus = menopause, -->
+<!--                        agegrp = agegrp, -->
+<!--                        density = density, -->
+<!--                        race = race, -->
+<!--                        Hispanic = Hispanic, -->
+<!--                        bmi = bmi, -->
+<!--                        agefirst = agefirst, -->
+<!--                        nrelbc = nrelbc, -->
+<!--                        brstproc = brstproc, -->
+<!--                        lastmamm=lastmamm, -->
+<!--                        surgmeno = surgmeno, -->
+<!--                        hrt = hrt, -->
+<!--                        invasive = invasive, -->
+<!--                        cancer = "Unknown") -->
+
+<!--   #Apply the model to result in normalized data using the predict funtion -->
+
+<!--   newdata2$xgb.pred.med<- predict(xgb.cancer.med, data.matrix(newdata)) -->
+<!--   print("Probability") -->
+
+<!--   return(newdata2$xgb.pred.med) -->
+<!-- } -->
+
+
+<!-- # Checking Function is Accurate -->
+<!-- TestEx = subset(Test, Test$xgb.pred.med > 0.90) -->
+<!-- TestEx[1,] -->
+
+<!-- Menopause = 0 -->
+<!-- AgeGroup = 1 -->
+<!-- Density = 2 -->
+<!-- Race = 1 -->
+<!-- Hispanic = 0 -->
+<!-- BMI = 1 -->
+<!-- AgeFirst = 0 -->
+<!-- NRelBC = 0 -->
+<!-- BreastProcedure = 0 -->
+<!-- LastM = 9 -->
+<!-- SurgMeno = 9 -->
+<!-- HRT = 9 -->
+<!-- Invasive = 1 -->
+
+<!-- #Testing the Function -->
+<!-- #BreastCancerProbability(Menopause, AgeGroup, Density, Race, Hispanic, BMI, AgeFirst, NRelBC, #BreastProcedure, LastM, SurgMeno, HRT, Invasive) -->
+
+<!-- ``` -->
+
+
+# SECOND DATA SET: Introduction
+
+Breast Cancer Wisconsin(Diagnostic) Data Set
+
+Predict whether the cancer is benign or malignant
+
+Features are computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. They describe characteristics of the cell nuclei present in the image.
+
+Ten real-valued features are computed for each cell nucleus:
+
+a) radius (mean of distances from center to points on the perimeter)
+b) texture (standard deviation of gray-scale values)
+c) perimeter
+d) area
+e) smoothness (local variation in radius lengths)
+f) compactness (perimeter^2 / area - 1.0)
+g) concavity (severity of concave portions of the contour)
+h) concave points (number of concave portions of the contour)
+i) symmetry
+j) fractal dimension ("coastline approximation" - 1)
+
+```{r, eval = TRUE} 
+#Import
+dt.wi <- read.csv("data.csv")
+dt.wi<-dt.wi[,1:32]
+dt.wi$diagnosis<-as.factor(dt.wi$diagnosis)
+
+head(dt.wi)
+tail(dt.wi)
+```
+```{r}
+describe(dt.wi)
+```
+
+#PCA Analysis
+```{r}
+dt.wi.sc <- scale(dt.wi[3:10])
+describe(dt.wi.sc)
+
+dt.wi.pc<-prcomp(dt.wi.sc)
+summary(dt.wi.pc)
+```
+```{r}
+dt.wi.pc$rotation
+
+```
+
+```{r}
+plot(dt.wi.pc, type='l')
+
+```
+```{r}
+biplot(dt.wi.pc,xlim=c(-.25,.15), ylim=c(-.12,.12))
+abline(h = 0, v = 0, col = "gray60")
+```
+
+```{r}
+plot(dt.wi.pc$x,pch=20,col=dt.wi$diagnosis)
+```
+
+
+
+
+```{r}
+KmeansClustering <- kmeans(dt.wi.sc, centers = 2)
+
+fviz_cluster(KmeansClustering, data = dt.wi.sc)
+```
+
+
+
+
+```{r}
+unique(dt.wi$X)
+```
+
+
+
+```{r}
+cancer.p<-table(dt.wi[2])
+cancer.p
+percent.malignant<-paste(round(cancer.p[[2]]/(cancer.p[[1]]+cancer.p[[2]])*100,digits = 3), "%")
+percent.malignant
+```
+```{r}
+set.seed(1234)
+split = sample.split(dt.wi$diagnosis, SplitRatio = 0.7)
+Train2 = subset(dt.wi, split==TRUE)
+Test2 = subset(dt.wi, split==FALSE)
+
+# Building a Logistic Regression Model with ALL the variables
+dt.wi.log = glm(diagnosis~ . - id, data = Train2, family = binomial(logit), na.action = na.pass)
+summary(dt.wi.log)
+
+head(dt.wi)
+
+```
+
+
+
+
+
+
+
+glm.fit: algorithm did not converge glm.fit: fitted probabilities numerically 0 or 1 occurred
+Issue with model, going to dig into what is happening by using a tree
+
+There is one fairly common circumstance in which both convergence problems and the Hauck-Donner phenomenon can occur. This is when the fitted probabilities are extremely close to zero or one. Consider a medical diagnosis problem with thousands of cases and around 50 binary explanatory variable (which may arise from coding fewer categorical variables); one of these indicators is rarely true but always indicates that the disease is present. Then the fitted probabilities of cases with that indicator should be one, which can only be achieved by taking βi = ∞. The result from glm will be warnings and an estimated coefficient of around +/- 10. There has been fairly extensive discussion of this in the statistical literature, usually claiming non-existence of maximum likelihood estimates; see Sautner and Duffy (1989, p. 234).
+
+Read more about this error here:https://stackoverflow.com/questions/8596160/why-am-i-getting-algorithm-did-not-converge-and-fitted-prob-numerically-0-or
+
+
+# Building a logistic regression model with only the Mean Variables
+
+
+```{r}
+#Prediction
+PredictTest2 = predict(dt.wi.log, newdata = Test2, type = "response")
+
+#Confusion Matrix
+cm2 = table(Test2$diagnosis, round(PredictTest2))
+row.names(cm2) = c("Benign", "Malignant")
+colnames(cm2) = c("Predicted: B", "Predictoin: M")
+cm2
+
+Accuracy = (103+55)/(103+55+9+4)
+Accuracy
+
+#Baseline Accuracy
+counttb = Test2 %>% 
+  filter(diagnosis == "M") %>% 
+  summarise(count = n())
+counttb
+
+1-counttb[1,]/nrow(Test2)
+
+#AUC
+TestPredLM <- data.frame(Probability = predict(dt.wi.log, Test2, type = c("response")),
+                       Prediction = round(predict(dt.wi.log, Test2, type = c("response")), digits = 0),
+                       ActualDiagnosis = Test2$diagnosis)
+
+auc.LM1 = roc(TestPredLM$ActualDiagnosis, TestPredLM$Prediction)
+auc(auc.LM1)
+
+#NOTE: AUC is 88% which is really good!
+
+```
+
+Using this model, only the texture, area, and smoothness have significance. It's accuracy is 93 %, which is about 30% greater than the baseline and its area underneath the curve is about 92%. 
+
+
+
+# CART MODEL
+
+```{r}
+# CART
+BCTree2 = rpart(diagnosis ~ ., method="class", data=Train2, minbucket=5)
+prp(BCTree2)
+
+# Evaluating the Model
+BCPredict2 = predict(BCTree2, newdata=Test2, type="class") # automatically assumes threshold = 0.5 and directly predicts 0 or 1
+table(Test2$diagnosis, BCPredict2)
+
+#Accuracy
+(101+54)/(10+6+101+54)
+
+```
+
+The CART model is less accurate than the logistic regression model, but only by 1%. 
+
+# XGBoost Model
+
+```{r}
+Train2 = Train2 %>% 
+  mutate(diagnosis = recode(diagnosis,
+                            "M" = 1,
+                            "B" = 0))
+Test2 = Test2 %>% 
+  mutate(diagnosis = recode(diagnosis,
+                            "M" = 1,
+                            "B" = 0))
+
+colsx = c(3,4,5,6,7,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32)
+xgb = xgboost(data = data.matrix(Train2[colsx]), 
+               label = Train2$diagnosis, 
+               eta = 0.1,
+               max_depth = 4, 
+               nround=100, 
+               subsample = 1,
+               colsample_bytree = 1,
+               num_class = 1,
+               min_child_weight = 5,
+               gamma = 5,
+               nthread = 30,
+               eval_metric = "logloss",
+               objective = "binary:logistic",
+               verbose = 0
+)
+
+Test2$XGB = predict(xgb, data.matrix(Test2[colsx]))
+Test2$XGB_Predict = round(Test2$XGB)
+
+# Evaluating the Model
+
+XGBAccuracy2 = Test2 %>% 
+  select(diagnosis, XGB)
+
+XGBAccuracy2$Prediction = round(XGBAccuracy2$XGB)
+
+cmxgb2 = table(XGBAccuracy2$diagnosis, XGBAccuracy2$Prediction)
+row.names(cmxgb2) = c("No", "Yes")
+cmxgb2
+
+AccuracyX2 = (103+57) / (103+57+4+7)
+AccuracyX2
+
+auc.xgb = roc(Test2$diagnosis, Test2$XGB)
+AUC = auc(auc.xgb)
+AUC
+
+```
+
+The area under the curve using the XGB model is 98% and the accuracy is 94%, which is the highest of the three. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+CancerTree = rpart(outcome ~ ., method="class", data=dt.wi, minbucket=1)
+prp(CancerTree)
+```
+
+
+
+
+
+
+
+```{r}
+dt.log = glm(cancer~., data = Train, family = binomial)
+summary(dt.log)
+
+
+```

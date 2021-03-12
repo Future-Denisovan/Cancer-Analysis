@@ -60,6 +60,7 @@ describe(df[1:30])
 
 # Proportion of malignant (1) vs benign (0)
 sum(df$diagnosis_m)/nrow(df)
+sum(df$diagnosis_m)
 ```
 
 The proportion of records that are malignant in this data set is 0.3726. This is much higher then anticipated because we expect the distribution of malignant tumor diagnosis to be very small. 
@@ -138,6 +139,7 @@ fviz_pca_biplot(df.pc,
 #### Create PCA data set
 ```{r}
 # Create new data set with PCA
+set.seed(1234)
 df.pca.pred <- predict(df.pc, df.sc)
 df.pca <- data.frame(df.pca.pred[])
 df.pca$f_diagnosis_m <- df.sc[, 32]
@@ -148,10 +150,11 @@ head(df.pca)
 ### Split Data Train & Test
 ```{r message=FALSE, warning=FALSE}
 # Split data into train and test
+set.seed(1234)
 split <- sample.split(df$f_diagnosis_m, SplitRatio = .70)
 df.train <- subset(df, split == TRUE)
 df.test <- subset(df, split == FALSE)
-
+describe(df.train)
 # Split PCA data set
 split.pca <- sample.split(df.pca$f_diagnosis_m, SplitRatio = .70)
 df.train.pca <- subset(df.pca, split == TRUE)
@@ -167,6 +170,7 @@ sum(df.test$diagnosis_m)/nrow(df.test)
 
 #### Logistic Regression
 ```{r}
+set.seed(1234)
 # Build logistic regression model
 df.train.log <- glm(f_diagnosis_m ~ . - diagnosis_m, data = df.train, family = binomial(logit))
 summary(df.train.log)
@@ -182,12 +186,12 @@ df.test$pred_log <- pred.test.log
 # Calculate test accuracy
 accuracy.test.log <- table(df.test$f_diagnosis_m, round(pred.test.log))
 accuracy.test.log
-(104+61)/(104+61+3+3)
-
+log.accuracy <- (accuracy.test.log[1,1] + accuracy.test.log[2,2])/sum(accuracy.test.log)
 ```
 
 #### PCA Logistic regression
 ```{r}
+set.seed(1234)
 # Build logistic regression model for PCA data set
 df.train.pca.log <- glm(f_diagnosis_m ~ PC1 + PC2 + PC3 + PC4 + PC5 , data = df.train.pca, family = binomial(logit))
 summary(df.train.pca.log)
@@ -198,13 +202,12 @@ table(df.train.pca$f_diagnosis_m, round(pred.train.pca))
 
 # Apply model on test data
 pred.test.log.pca <- predict(df.train.pca.log, newdata = df.test.pca, type='response')
-df.test$pred_log_pca <- pred.test.log.pca
+df.test.pca$pred_log_pca <- pred.test.log.pca
 
 # Calculate test accuracy
 accuracy.test.log.pca <- table(df.test$f_diagnosis_m, round(pred.test.log.pca))
 accuracy.test.log.pca
-(106+60)/(106+60+1+4)
-
+log.pca.accuracy <- (accuracy.test.log.pca[1,1] + accuracy.test.log.pca[2,2])/sum(accuracy.test.log.pca)
 ```
 
 ### Model Evaluation
@@ -212,11 +215,11 @@ accuracy.test.log.pca
 library(pROC)
 # logit 1 model accuracy
 accuracy.test.log
-(104+61)/(104+61+3+3)
+log.accuracy
 
 # Logit 2 (PCA) mode accuracy
 accuracy.test.log.pca
-(106+60)/(106+60+1+4)
+log.pca.accuracy
 
 # AUC logit 1 model
 roc(df.test$f_diagnosis_m, pred.test.log, plot=TRUE)
