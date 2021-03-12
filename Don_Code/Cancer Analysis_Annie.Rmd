@@ -504,7 +504,7 @@ row.names(cm2) = c("Benign", "Malignant")
 colnames(cm2) = c("Predicted: B", "Predictoin: M")
 cm2
 
-Accuracy = (103+55)/(103+55+9+4)
+Accuracy = (103+53)/(103+53+11+4)
 Accuracy
 
 #Baseline Accuracy
@@ -522,7 +522,7 @@ TestPredLM <- data.frame(Probability = predict(dt.wi.log, Test2, type = c("respo
 
 auc.LM1 = roc(TestPredLM$ActualDiagnosis, TestPredLM$Prediction)
 auc(auc.LM1)
-
+TestPredLM
 #NOTE: AUC is 88% which is really good!
 
 ```

@@ -222,9 +222,9 @@ accuracy.test.log.pca
 log.pca.accuracy
 
 # AUC logit 1 model
-roc(df.test$f_diagnosis_m, pred.test.log, plot=TRUE)
+roc(df.test$f_diagnosis_m, round(pred.test.log), plot=FALSE)
 
 # AUC logit 2 (PCA) model
-roc(df.test.pca$f_diagnosis_m, pred.test.log.pca, plot=TRUE)
+roc(df.test.pca$f_diagnosis_m, round(pred.test.log.pca), plot=FALSE)
 
 ```
